@@ -17,6 +17,11 @@ let windowMin = parseInt(process.argv[4] || "5", 10)
 // Log file for usage history (append-only JSONL). Never contains the key.
 let logFile = process.env.OLLAMA_USAGE_LOG || path.join(process.cwd(), "ollama-usage.jsonl")
 
+function formatDuration(sec: number): string {
+  if (sec % 60 === 0) return `${sec / 60}min`
+  return `${sec}s`
+}
+
 function iso(d: Date): string {
   let pad = (n: number, w = 2) => String(n).padStart(w, "0")
   return (
@@ -43,8 +48,8 @@ export async function main(): Promise<void> {
 
   console.log(`ollama-cloud-usage monitor`)
   console.log(`weekly reset: Monday 00:00 UTC (fixed)`)
-  console.log(`session reset: rolling 5h from last observed reset (bootstrap on first run)`)
-  console.log(`baseline ${baselineSec}s, fine ${fineSec}s within ±${windowMin}min of boundary`)
+  console.log(`session reset: rolling 5h from last observed reset`)
+  console.log(`baseline ${formatDuration(baselineSec)}, fine ${formatDuration(fineSec)} within ±${windowMin}min of boundary`)
   console.log(`log -> ${logFile}`)
   console.log(`commands:`)
   console.log(`  r  refresh now`)
