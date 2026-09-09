@@ -16,8 +16,12 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "ollama-cloud-usage": "bin.js"
+  },
   "files": [
-    "dist"
+    "dist",
+    "bin.js"
   ],
   "scripts": {
     "test": "tsc --noEmit",
