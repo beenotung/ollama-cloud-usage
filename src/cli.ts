@@ -1,5 +1,6 @@
 import fs from "fs"
 import path from "path"
+import readline from "readline"
 import { loadKey } from "./key"
 import { fetchUsage } from "./api"
 import { nextWeeklyReset, nextSessionReset, SESSION_MS } from "./reset"
@@ -45,6 +46,10 @@ export async function main(): Promise<void> {
   console.log(`session reset: rolling 5h from last observed reset (bootstrap on first run)`)
   console.log(`baseline ${baselineSec}s, fine ${fineSec}s within ±${windowMin}min of boundary`)
   console.log(`log -> ${logFile}`)
+  console.log(`commands:`)
+  console.log(`  r  refresh now`)
+  console.log(`  q  quit`)
+  console.log(`  ?  show this help`)
 
   while (true) {
     let now = new Date()
@@ -80,6 +85,47 @@ export async function main(): Promise<void> {
     if (sessionReset) nearest = Math.min(nearest, Math.abs(sessionReset.getTime() - now.getTime()))
     nearest = Math.min(nearest, Math.abs(weeklyReset.getTime() - now.getTime()))
     let interval = nearest <= windowMin * 60000 ? fineSec : baselineSec
-    await new Promise((r) => setTimeout(r, interval * 1000))
+
+    // wait for the interval, or an 'r' + enter to poll immediately
+    await waitForIntervalOrKeypress(interval)
   }
+}
+
+// Resolve when the interval elapses, or when the user types a command + enter.
+//   r  -> refresh now (recompute interval)
+//   q  -> quit
+//   ?  -> show command list (keep waiting)
+function waitForIntervalOrKeypress(intervalSec: number): Promise<void> {
+  return new Promise((resolve) => {
+    let done = false
+    let finish = () => {
+      if (done) return
+      done = true
+      resolve()
+    }
+    let timer = setTimeout(finish, intervalSec * 1000)
+
+    let rl = readline.createInterface({ input: process.stdin })
+    rl.on("line", (line) => {
+      let cmd = line.trim().toLowerCase()
+      if (cmd === "r") {
+        clearTimeout(timer)
+        rl.close()
+        finish()
+      } else if (cmd === "q") {
+        clearTimeout(timer)
+        rl.close()
+        process.exit(0)
+      } else if (cmd === "?") {
+        console.log("commands:")
+        console.log("  r  refresh now")
+        console.log("  q  quit")
+        console.log("  ?  show this help")
+      }
+    })
+    rl.on("close", () => {
+      clearTimeout(timer)
+      finish()
+    })
+  })
 }
