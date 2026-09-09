@@ -6,24 +6,36 @@ import { fetchUsage } from "./api"
 import { nextWeeklyReset, nextSessionReset, SESSION_MS } from "./reset"
 import { printStatus } from "./display"
 
-// CLI: ollama-cloud-usage [baseline_sec] [fine_sec] [window_min] [--reset-time <time>]
-//   baseline_sec = idle polling interval (default 300 = 5 min)
-//   fine_sec     = near-boundary polling interval (default 30)
-//   window_min   = half-window around each boundary (default 5)
+// CLI: ollama-cloud-usage [--baseline <sec>] [--fine <sec>] [--window <min>] [--reset-time <time>]
+//   --baseline <sec> = idle polling interval (default 300 = 5 min)
+//   --fine <sec>     = near-boundary polling interval (default 30)
+//   --window <min>   = half-window around each boundary (default 5)
 //   --reset-time <time> = seed the session anchor (ISO timestamp or HH:MM)
-let baselineSec = parseInt(process.argv[2] || "300", 10)
-let fineSec = parseInt(process.argv[3] || "30", 10)
-let windowMin = parseInt(process.argv[4] || "5", 10)
-
-// parse --reset-time <time>
+// All flags are named so they can be given in any order.
+let baselineSec = 300
+let fineSec = 30
+let windowMin = 5
 let resetTimeArg: string | null = null
-for (let i = 0; i < process.argv.length; i++) {
-  if (process.argv[i] === "--reset-time" && process.argv[i + 1]) {
-    resetTimeArg = process.argv[i + 1]
+for (let i = 2; i < process.argv.length; i++) {
+  let arg = process.argv[i]
+  let value = process.argv[i + 1]
+  if (arg === "--baseline" && value) {
+    baselineSec = parseInt(value, 10)
+    i++
+  } else if (arg === "--fine" && value) {
+    fineSec = parseInt(value, 10)
+    i++
+  } else if (arg === "--window" && value) {
+    windowMin = parseInt(value, 10)
+    i++
+  } else if (arg === "--reset-time" && value) {
+    resetTimeArg = value
+    i++
   }
 }
 
-// Parse a session-reset time: full ISO timestamp, or HH:MM (today, local time).
+// Parse a session-reset time: full ISO timestamp, or HH:MM (next occurrence,
+// local time).
 function parseResetTime(value: string): Date | null {
   let d = new Date(value)
   if (!Number.isNaN(d.getTime())) return d
@@ -32,7 +44,7 @@ function parseResetTime(value: string): Date | null {
     let now = new Date()
     let cand = new Date(now)
     cand.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0)
-    if (cand > now) cand.setDate(cand.getDate() - 1)
+    if (cand <= now) cand.setDate(cand.getDate() + 1)
     return cand
   }
   return null
@@ -182,37 +194,40 @@ export async function main(): Promise<void> {
 //   r  -> refresh now (recompute interval)
 //   q  -> quit
 //   ?  -> show command list (keep waiting)
+// The readline interface is created once and reused, so listeners don't
+// accumulate across polls. The handlers act on the *current* poll's timer and
+// finish via module-level refs, so they stay correct across polls.
+let rl: readline.Interface | null = null
+let currentTimer: NodeJS.Timeout | null = null
+let currentFinish: (() => void) | null = null
 function waitForIntervalOrKeypress(intervalSec: number): Promise<void> {
   return new Promise((resolve) => {
     let done = false
     let finish = () => {
       if (done) return
       done = true
+      if (currentTimer) clearTimeout(currentTimer)
       resolve()
     }
-    let timer = setTimeout(finish, intervalSec * 1000)
+    currentFinish = finish
+    currentTimer = setTimeout(finish, intervalSec * 1000)
 
-    let rl = readline.createInterface({ input: process.stdin })
-    rl.on("line", (line) => {
-      let cmd = line.trim().toLowerCase()
-      if (cmd === "r") {
-        clearTimeout(timer)
-        rl.close()
-        finish()
-      } else if (cmd === "q") {
-        clearTimeout(timer)
-        rl.close()
-        process.exit(0)
-      } else if (cmd === "?") {
-        console.log("commands:")
-        console.log("  r  refresh now")
-        console.log("  q  quit")
-        console.log("  ?  show this help")
-      }
-    })
-    rl.on("close", () => {
-      clearTimeout(timer)
-      finish()
-    })
+    if (!rl) {
+      rl = readline.createInterface({ input: process.stdin })
+      rl.on("line", (line) => {
+        let cmd = line.trim().toLowerCase()
+        if (cmd === "r") {
+          currentFinish?.()
+        } else if (cmd === "q") {
+          if (currentTimer) clearTimeout(currentTimer)
+          process.exit(0)
+        } else if (cmd === "?") {
+          console.log("commands:")
+          console.log("  r  refresh now")
+          console.log("  q  quit")
+          console.log("  ?  show this help")
+        }
+      })
+    }
   })
 }
