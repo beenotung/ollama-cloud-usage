@@ -6,21 +6,40 @@ import { fetchUsage } from "./api"
 import { nextWeeklyReset, nextSessionReset, SESSION_MS } from "./reset"
 import { printStatus } from "./display"
 
-// CLI: ollama-cloud-usage [baseline_sec] [fine_sec] [window_min]
+// CLI: ollama-cloud-usage [baseline_sec] [fine_sec] [window_min] [--reset-time <time>]
 //   baseline_sec = idle polling interval (default 300 = 5 min)
 //   fine_sec     = near-boundary polling interval (default 30)
 //   window_min   = half-window around each boundary (default 5)
+//   --reset-time <time> = seed the session anchor (ISO timestamp or HH:MM)
 let baselineSec = parseInt(process.argv[2] || "300", 10)
 let fineSec = parseInt(process.argv[3] || "30", 10)
 let windowMin = parseInt(process.argv[4] || "5", 10)
 
+// parse --reset-time <time>
+let resetTimeArg: string | null = null
+for (let i = 0; i < process.argv.length; i++) {
+  if (process.argv[i] === "--reset-time" && process.argv[i + 1]) {
+    resetTimeArg = process.argv[i + 1]
+  }
+}
+
+// Parse a session-reset time: full ISO timestamp, or HH:MM (today, local time).
+function parseResetTime(value: string): Date | null {
+  let d = new Date(value)
+  if (!Number.isNaN(d.getTime())) return d
+  let m = /^(\d{1,2}):(\d{2})$/.exec(value)
+  if (m) {
+    let now = new Date()
+    let cand = new Date(now)
+    cand.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0)
+    if (cand > now) cand.setDate(cand.getDate() - 1)
+    return cand
+  }
+  return null
+}
+
 // Log file for usage history (append-only JSONL). Never contains the key.
 let logFile = process.env.OLLAMA_USAGE_LOG || path.join(process.cwd(), "ollama-usage.jsonl")
-
-function formatDuration(sec: number): string {
-  if (sec % 60 === 0) return `${sec / 60}min`
-  return `${sec}s`
-}
 
 // Scan the existing JSONL log for the most recent session reset (a drop in
 // session_usage), then advance the rolling 5h chain forward to the latest
@@ -83,19 +102,36 @@ export async function main(): Promise<void> {
   let lastSessionReset: Date | null = null
   let prevUsage: number | null = null
 
-  // bootstrap the session anchor from the existing log (if any): scan for the
-  // last reset (a drop in session_usage), then advance the rolling chain to the
-  // most recent reset <= now. matches the local monitor's behavior.
-  let boot = bootstrapFromLog(logFile)
-  if (boot) {
-    lastSessionReset = boot.lastReset
-    prevUsage = boot.lastUsage
+  // bootstrap the session anchor: --reset-time flag takes precedence, then
+  // the existing log (scan for the last reset, advance the rolling chain to the
+  // most recent reset <= now). matches the local monitor's behavior.
+  if (resetTimeArg) {
+    let seeded = parseResetTime(resetTimeArg)
+    if (seeded) {
+      let now = Date.now()
+      if (seeded.getTime() > now) {
+        // future time = the next reset -> anchor is 5h before it
+        lastSessionReset = new Date(seeded.getTime() - 5 * 3600_000)
+      } else {
+        // past time = the last reset -> advance the chain to the most recent <= now
+        let k = Math.floor((now - seeded.getTime()) / (5 * 3600_000))
+        lastSessionReset = new Date(seeded.getTime() + k * 5 * 3600_000)
+      }
+      console.log(`session anchor seeded: ${lastSessionReset.toISOString()}`)
+    } else {
+      console.error(`invalid --reset-time: ${resetTimeArg}`)
+    }
+  } else {
+    let boot = bootstrapFromLog(logFile)
+    if (boot) {
+      lastSessionReset = boot.lastReset
+      prevUsage = boot.lastUsage
+    }
   }
 
   console.log(`ollama-cloud-usage monitor`)
   console.log(`weekly reset: Monday 00:00 UTC (fixed)`)
   console.log(`session reset: rolling 5h from last observed reset`)
-  console.log(`baseline ${formatDuration(baselineSec)}, fine ${formatDuration(fineSec)} within ±${windowMin}min of boundary`)
   console.log(`log -> ${logFile}`)
   console.log(`commands:`)
   console.log(`  r  refresh now`)
