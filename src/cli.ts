@@ -34,8 +34,9 @@ for (let i = 2; i < process.argv.length; i++) {
   }
 }
 
-// Parse a session-reset time: full ISO timestamp, or HH:MM (next occurrence,
-// local time).
+// Parse a session-reset time: full ISO timestamp, or HH:MM (today, local time).
+// The future/past decision is made by the caller: a future time is the next
+// reset, a past time is the last reset.
 function parseResetTime(value: string): Date | null {
   let d = new Date(value)
   if (!Number.isNaN(d.getTime())) return d
@@ -44,7 +45,6 @@ function parseResetTime(value: string): Date | null {
     let now = new Date()
     let cand = new Date(now)
     cand.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0)
-    if (cand <= now) cand.setDate(cand.getDate() + 1)
     return cand
   }
   return null
