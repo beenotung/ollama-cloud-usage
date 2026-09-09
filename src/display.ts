@@ -58,6 +58,7 @@ export function printStatus(input: StatusInput): void {
   let sRate = sElapsed ? sp / sElapsed : null
   let wRate = wElapsed ? wp / wElapsed : null
 
+  console.log("")
   console.log(`[${hhmm(now)}] 5H:${sp.toFixed(1)}% W:${wp.toFixed(1)}%`)
   console.log(`  ${"5-hour".padEnd(6)}  ${bar(18, sp)}  ${sp.toFixed(1).padStart(5)}% ${"used".padEnd(7)}   rate ${rateColor(sRate)}${sRate ? sRate.toFixed(1) + "x" : "?"}${RESET}`)
   if (sElapsed !== null) {
