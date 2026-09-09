@@ -22,6 +22,43 @@ function formatDuration(sec: number): string {
   return `${sec}s`
 }
 
+// Scan the existing JSONL log for the most recent session reset (a drop in
+// session_usage), then advance the rolling 5h chain forward to the latest
+// reset <= now. Returns the anchor and the last observed usage, or null if the
+// log is empty/unreadable.
+function bootstrapFromLog(logFile: string): { lastReset: Date; lastUsage: number } | null {
+  let lines: string[]
+  try {
+    lines = fs.readFileSync(logFile, "utf8").split("\n").filter(Boolean)
+  } catch {
+    return null
+  }
+  if (lines.length === 0) return null
+
+  let lastUsage: number | null = null
+  let lastReset: Date | null = null
+  for (let line of lines) {
+    let row: { timestamp?: string; session_usage?: number }
+    try {
+      row = JSON.parse(line)
+    } catch {
+      continue
+    }
+    if (typeof row.session_usage !== "number") continue
+    if (lastUsage !== null && row.session_usage < lastUsage) {
+      lastReset = new Date(row.timestamp || "")
+    }
+    lastUsage = row.session_usage
+  }
+  if (!lastReset || !lastUsage) return null
+
+  // advance the chain forward to the most recent reset <= now
+  let now = Date.now()
+  let k = Math.floor((now - lastReset.getTime()) / (5 * 3600_000))
+  let anchor = new Date(lastReset.getTime() + k * 5 * 3600_000)
+  return { lastReset: anchor, lastUsage }
+}
+
 function iso(d: Date): string {
   let pad = (n: number, w = 2) => String(n).padStart(w, "0")
   return (
@@ -45,6 +82,15 @@ export async function main(): Promise<void> {
   let key = loadKey()
   let lastSessionReset: Date | null = null
   let prevUsage: number | null = null
+
+  // bootstrap the session anchor from the existing log (if any): scan for the
+  // last reset (a drop in session_usage), then advance the rolling chain to the
+  // most recent reset <= now. matches the local monitor's behavior.
+  let boot = bootstrapFromLog(logFile)
+  if (boot) {
+    lastSessionReset = boot.lastReset
+    prevUsage = boot.lastUsage
+  }
 
   console.log(`ollama-cloud-usage monitor`)
   console.log(`weekly reset: Monday 00:00 UTC (fixed)`)
