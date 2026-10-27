@@ -1,4 +1,6 @@
-import { SESSION_MS, WEEKLY_MS } from "./reset"
+// Window lengths, used to compute how much of each window has elapsed.
+const SESSION_MS = 5 * 3600_000
+const WEEKLY_MS = 7 * 24 * 3600_000
 
 const GREEN = "\x1b[32m"
 const ORANGE = "\x1b[33m"
@@ -28,7 +30,7 @@ function countdown(ms: number): string {
   return `${s}s`
 }
 
-function hhmm(d: Date): string {
+export function hhmm(d: Date): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
 
