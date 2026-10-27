@@ -44,7 +44,10 @@ ollama-cloud-usage [--interval <sec>]
 The key is resolved by precedence:
 
 1. `OLLAMA_API_KEY` env var
-2. `~/.local/share/opencode/auth.json` → `ollama-cloud.key` (opencode users)
+2. `~/.local/share/opencode/auth.json` → `ollama-cloud.key` (OpenCode 1)
+3. `~/.local/share/opencode/opencode.db` → `credential` row with
+   `integration_id = 'ollama-cloud'` (OpenCode 2, read via Node's built-in
+   SQLite, falling back to the `sqlite3` CLI if needed)
 
 The key is never logged or written to disk by this tool.
 
