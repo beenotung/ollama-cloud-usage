@@ -2,14 +2,21 @@
   "name": "ollama-cloud-usage",
   "version": "0.0.0",
   "type": "commonjs",
-  "description": "",
-  "keywords": [],
+  "description": "Monitor your Ollama Cloud session/weekly quota from the terminal",
+  "keywords": [
+    "ollama",
+    "ollama-cloud",
+    "quota",
+    "usage",
+    "monitor",
+    "cli"
+  ],
   "author": {
     "name": "Beeno Tung",
     "email": "aabbcc1241@yahoo.com.hk",
     "url": "https://beeno-tung.surge.sh"
   },
-  "license": "ISC",
+  "license": "BSD-2-Clause",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/beenotung/ollama-cloud-usage.git"
