@@ -5,25 +5,15 @@ import { loadKey } from "./key"
 import { fetchUsage, fetchBalance, hasLimits, UsageReport, Balance } from "./api"
 import { printStatus, hhmm } from "./display"
 
-// CLI: ollama-cloud-usage [--baseline <sec>] [--fine <sec>] [--window <min>]
-//   --baseline <sec> = idle polling interval (default 300 = 5 min)
-//   --fine <sec>     = near-boundary polling interval (default 30)
-//   --window <min>   = half-window around each boundary (default 5)
-// All flags are named so they can be given in any order.
-let baselineSec = 300
-let fineSec = 30
-let windowMin = 5
+// CLI: ollama-cloud-usage [--interval <sec>]
+//   --interval <sec> = polling interval (default 300 = 5 min)
+// Reset times come from the API, so there is no boundary-aware polling.
+let intervalSec = 300
 for (let i = 2; i < process.argv.length; i++) {
   let arg = process.argv[i]
   let value = process.argv[i + 1]
-  if (arg === "--baseline" && value) {
-    baselineSec = parseInt(value, 10)
-    i++
-  } else if (arg === "--fine" && value) {
-    fineSec = parseInt(value, 10)
-    i++
-  } else if (arg === "--window" && value) {
-    windowMin = parseInt(value, 10)
+  if (arg === "--interval" && value) {
+    intervalSec = parseInt(value, 10)
     i++
   }
 }
@@ -108,12 +98,7 @@ export async function main(): Promise<void> {
         now,
       })
 
-      let nearest = Math.min(
-        Math.abs(sessionReset.getTime() - now.getTime()),
-        Math.abs(weeklyReset.getTime() - now.getTime()),
-      )
-      let interval = nearest <= windowMin * 60000 ? fineSec : baselineSec
-      await waitForIntervalOrKeypress(interval)
+      await waitForIntervalOrKeypress(intervalSec)
       continue
     }
 
@@ -133,7 +118,7 @@ export async function main(): Promise<void> {
       }
     }
     console.log(`  requests  ${usage.totals.request_count.toLocaleString()} over ${usage.range}`)
-    await waitForIntervalOrKeypress(baselineSec)
+    await waitForIntervalOrKeypress(intervalSec)
   }
 }
 

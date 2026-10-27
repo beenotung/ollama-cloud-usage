@@ -5,6 +5,18 @@ state from `/api/balance` (session and weekly remaining percentages plus
 authoritative reset times) and request counts from `/api/usage`, shows a live
 dashboard, and logs history to a JSONL file.
 
+## Features
+
+- **Live quota dashboard** — session and weekly usage with bars, burn rate, and
+  reset countdowns.
+- **Authoritative reset times** — read from `/api/balance`, not inferred.
+- **Configurable polling interval** — 5 minutes by default.
+- **Keyboard shortcuts** — refresh on demand without restarting.
+- **History log** — append-only JSONL you can analyse later.
+- **Credit-plan aware** — shows remaining credit when session/weekly limits are
+  not used.
+- **Zero runtime dependencies** — Node built-ins only.
+
 ## Install
 
 ```sh
@@ -14,14 +26,10 @@ npm install -g ollama-cloud-usage
 ## Usage
 
 ```sh
-ollama-cloud-usage [--baseline <sec>] [--fine <sec>] [--window <min>]
+ollama-cloud-usage [--interval <sec>]
 ```
 
-All flags are named and can be given in any order.
-
-- `--baseline <sec>` — idle polling interval (default `300` = 5 min)
-- `--fine <sec>` — near-boundary polling interval (default `30`)
-- `--window <min>` — half-window around each reset boundary (default `5`)
+- `--interval <sec>` — polling interval (default `300` = 5 min)
 
 ### Interactive commands
 
