@@ -4,7 +4,11 @@
   "type": "commonjs",
   "description": "",
   "keywords": [],
-  "author": "",
+  "author": {
+    "name": "Beeno Tung",
+    "email": "aabbcc1241@yahoo.com.hk",
+    "url": "https://beeno-tung.surge.sh"
+  },
   "license": "ISC",
   "repository": {
     "type": "git",
@@ -14,8 +18,8 @@
   "bugs": {
     "url": "https://github.com/beenotung/ollama-cloud-usage/issues"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
   "bin": {
     "ollama-cloud-usage": "bin.js"
   },
