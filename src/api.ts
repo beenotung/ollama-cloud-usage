@@ -6,7 +6,19 @@ export interface UsageMetrics {
   output_tokens?: number
 }
 
-export interface UsageBucket extends UsageMetrics {
+// One entry of the `group_by=model` breakdown.
+export interface UsageGroup extends UsageMetrics {
+  model: string
+}
+
+// `groups` is present when group_by is requested (top 10, ranked by cost or
+// request count); `remainder` folds in everything outside that limit.
+export interface UsageSummary extends UsageMetrics {
+  groups?: UsageGroup[]
+  remainder?: UsageMetrics
+}
+
+export interface UsageBucket extends UsageSummary {
   from: string
   until: string
   partial?: boolean
@@ -16,9 +28,10 @@ export interface UsageReport {
   range: "24h" | "7d" | "30d"
   scope: "self" | "team"
   granularity: "hour" | "day"
+  group_by?: "model"
   from: string
   until: string
-  totals: UsageMetrics
+  totals: UsageSummary
   buckets: UsageBucket[]
 }
 
@@ -40,8 +53,14 @@ export interface Balance {
   purchased?: { balance_usd: number }
 }
 
-export async function fetchUsage(key: string, range: string = "7d"): Promise<UsageReport> {
-  let res = await fetch(`https://ollama.com/api/usage?range=${range}`, {
+export async function fetchUsage(
+  key: string,
+  options: { range?: string; groupBy?: "model" } = {},
+): Promise<UsageReport> {
+  let range = options.range || "7d"
+  let url = `https://ollama.com/api/usage?range=${range}`
+  if (options.groupBy) url += `&group_by=${options.groupBy}`
+  let res = await fetch(url, {
     headers: { Authorization: `Bearer ${key}` },
   })
   if (!res.ok) throw new Error(`API returned ${res.status}: ${await res.text()}`)

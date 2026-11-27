@@ -70,8 +70,12 @@ Snapshots are appended to `./ollama-usage.jsonl` (one JSON object per line), or
 the path in `OLLAMA_USAGE_LOG`. Each line:
 
 ```json
-{"timestamp":"...","session":{"used_percent":3.91,"remaining_percent":96.09,"resets_at":"2026-10-27T08:00:00Z"},"weekly":{"used_percent":16.67,"remaining_percent":83.33,"resets_at":"2026-11-02T00:00:00Z"},"purchased":{"balance_usd":0},"usage":{"range":"7d","totals":{"request_count":29012}}}
+{"timestamp":"...","session":{"used_percent":3.91,"remaining_percent":96.09,"resets_at":"2026-10-27T08:00:00Z"},"weekly":{"used_percent":16.67,"remaining_percent":83.33,"resets_at":"2026-11-02T00:00:00Z"},"purchased":{"balance_usd":0},"usage":{"range":"7d","totals":{"request_count":37796,"groups":[{"model":"deepseek-v4.1-flash:1017","request_count":32964},{"model":"glm-5.3-flash","request_count":4588}]}}}
 ```
+
+`usage.totals.groups` holds the per-model request counts (`group_by=model`,
+top 10). The monitor only logs these — it does not display or interpret them;
+cost analysis can be done later from the log.
 
 The log never contains the API key or per-request content.
 

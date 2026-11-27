@@ -70,7 +70,7 @@ export async function main(): Promise<void> {
   while (true) {
     let now = new Date()
     let balance = await fetchBalance(key)
-    let usage = await fetchUsage(key, "7d")
+    let usage = await fetchUsage(key, { range: "7d", groupBy: "model" })
 
     if (hasLimits(balance)) {
       // Legacy plans: session/weekly remaining % plus exact reset times.
