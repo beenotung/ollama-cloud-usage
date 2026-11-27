@@ -1,6 +1,6 @@
 {
   "name": "ollama-cloud-usage",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "commonjs",
   "description": "Monitor your Ollama Cloud session/weekly quota from the terminal",
   "keywords": [
