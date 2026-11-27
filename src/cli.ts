@@ -47,9 +47,21 @@ function logQuota(options: {
   }
   if (options.balance.purchased) row.purchased = options.balance.purchased
   if (options.usage) {
+    // The partial bucket is a fixed, growing slice, so differencing two polls
+    // gives the new requests per model — the input a cost estimator needs.
+    // `totals` is a sliding window and cannot be differenced that way.
+    let buckets = options.usage.buckets
+    let last = buckets && buckets.length > 0 ? buckets[buckets.length - 1] : undefined
     row.usage = {
       range: options.usage.range,
       totals: options.usage.totals,
+      partial: last
+        ? {
+            from: last.from,
+            request_count: last.request_count,
+            groups: last.groups || [],
+          }
+        : null,
     }
   }
   fs.appendFileSync(logFile, JSON.stringify(row) + "\n")

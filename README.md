@@ -70,12 +70,18 @@ Snapshots are appended to `./ollama-usage.jsonl` (one JSON object per line), or
 the path in `OLLAMA_USAGE_LOG`. Each line:
 
 ```json
-{"timestamp":"...","session":{"used_percent":3.91,"remaining_percent":96.09,"resets_at":"2026-10-27T08:00:00Z"},"weekly":{"used_percent":16.67,"remaining_percent":83.33,"resets_at":"2026-11-02T00:00:00Z"},"purchased":{"balance_usd":0},"usage":{"range":"7d","totals":{"request_count":37796,"groups":[{"model":"deepseek-v4.1-flash:1017","request_count":32964},{"model":"glm-5.3-flash","request_count":4588}]}}}
+{"timestamp":"...","session":{"used_percent":3.91,"remaining_percent":96.09,"resets_at":"2026-10-27T08:00:00Z"},"weekly":{"used_percent":16.67,"remaining_percent":83.33,"resets_at":"2026-11-02T00:00:00Z"},"purchased":{"balance_usd":0},"usage":{"range":"7d","totals":{"request_count":37796,"groups":[{"model":"deepseek-v4.1-flash:1017","request_count":32964},{"model":"glm-5.3-flash","request_count":4588}]},"partial":{"from":"2026-10-27T00:00:00Z","request_count":2084,"groups":[{"model":"deepseek-v4.1-flash:1017","request_count":1148},{"model":"glm-5.3-flash","request_count":911}]}}}
 ```
 
-`usage.totals.groups` holds the per-model request counts (`group_by=model`,
-top 10). The monitor only logs these — it does not display or interpret them;
-cost analysis can be done later from the log.
+`usage.totals.groups` holds per-model request counts (`group_by=model`, top 10).
+
+`usage.partial` is the current (still-growing) bucket. Because a bucket is a
+fixed time slice, differencing two snapshots gives the new requests per model —
+the input a cost estimator needs. `totals` is a sliding 7-day window and cannot
+be differenced that way.
+
+The monitor only logs these — it does not display or interpret them; cost
+analysis can be done later from the log.
 
 The log never contains the API key or per-request content.
 
